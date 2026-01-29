@@ -1,0 +1,124 @@
+<h3 class="mb-30">Çekler / Çıkış</h3>
+
+<div class="row">
+
+    <div class="col-12">
+        <div class="box">
+
+            <div class="box-head">
+                <h4 class="title">Çek Çıkışı</h4>
+            </div>
+
+            <div class="box-body">
+                <form>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-20">
+                            <label>Çek No</label>
+                            <input type="text" class="form-control" placeholder="Çek numarası">
+                        </div>
+
+                        <div class="col-md-6 mb-20">
+                            <label>Banka</label>
+                            <select class="form-control">
+                                <option value="">Seçiniz...</option>
+                                <option>Ziraat Bankası</option>
+                                <option>İş Bankası</option>
+                                <option>Garanti BBVA</option>
+                                <option>Akbank</option>
+                                <option>Yapı Kredi</option>
+                                <option>Halkbank</option>
+                                <option>Vakıfbank</option>
+                                <option>QNB Finansbank</option>
+                                <option>Denizbank</option>
+                                <option>TEB</option>
+                                <option>Diğer</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-20">
+                            <label>Vade Tarihi</label>
+                            <input type="date" class="form-control">
+                        </div>
+
+                        <div class="col-md-6 mb-20">
+                            <label>Tutar</label>
+                            <input type="text" id="tutar" class="form-control" placeholder="Tutar giriniz">
+                        </div>
+
+                        <div class="col-md-12 mb-20">
+                            <label>Açıklama</label>
+                            <textarea class="form-control" placeholder="Açıklama"></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <button type="button" class="button button-primary">
+                                Kaydet
+                            </button>
+                        </div>
+
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+const input = document.getElementById("tutar");
+
+function formatCurrency(value) {
+    value = value.replace(/[^0-9,]/g, "");
+
+    const parts = value.split(",");
+    if (parts.length > 2) {
+        value = parts[0] + "," + parts.slice(1).join("");
+    }
+
+    let [integerPart, decimalPart] = value.split(",");
+
+    integerPart = integerPart.replace(/\./g, "");
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    if (decimalPart !== undefined) {
+        decimalPart = decimalPart.substring(0, 2);
+        return integerPart + "," + decimalPart + " TL";
+    } else {
+        return integerPart + " TL";
+    }
+}
+
+if (input) {
+    input.addEventListener("input", function () {
+        const start = this.selectionStart;
+        const oldLength = this.value.length;
+
+        this.value = formatCurrency(this.value.replace(" TL", ""));
+
+        const newLength = this.value.length;
+        const diff = newLength - oldLength;
+
+        this.setSelectionRange(start + diff, start + diff);
+    });
+
+    input.addEventListener("blur", function () {
+        let val = this.value.replace(" TL", "").replace(/\./g, "").replace(",", ".");
+        if (val === "") return;
+
+        let num = parseFloat(val);
+        if (isNaN(num)) {
+            this.value = "";
+            return;
+        }
+
+        this.value = num.toLocaleString("tr-TR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }) + " TL";
+    });
+}
+</script>
