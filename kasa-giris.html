@@ -19,19 +19,28 @@
                     <div class="row">
 
                         <div class="col-md-6 mb-20">
-                            <label>Tutar</label>
-                            <input type="text" id="tutar" class="form-control" placeholder="Tutar giriniz">
-                        </div>
+                        <label>Tutar (₺)</label>
+                        <input 
+                           type="text"
+                           id="tutar"
+                           class="form-control"
+                           placeholder="0,00"
+                           inputmode="numeric"
+                           autocomplete="off"
+                         >
+                         </div>
+
 
                         <div class="col-md-12 mb-20">
                             <label>Açıklama</label>
-                            <textarea class="form-control" placeholder="Açıklama"></textarea>
+                            <textarea id="aciklama" class="form-control" placeholder="Açıklama"></textarea>
                         </div>
 
                         <div class="col-12">
-                            <button type="button" class="button button-primary">
-                                Kaydet
+                            <button type="button" id="btnKasaGiris" class="button button-primary">
+                            Kaydet
                             </button>
+
                         </div>
 
                     </div>

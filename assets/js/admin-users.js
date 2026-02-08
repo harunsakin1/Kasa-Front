@@ -97,7 +97,7 @@ async function loadUsers() {
     });
 
     if (!res.ok) {
-        alert("Kullanıcılar yüklenemedi");
+        showToast("Kullanıcılar yüklenemedi.","error");
         return;
     }
 
@@ -132,7 +132,7 @@ async function addUser() {
     const password = document.getElementById("newUserPassword")?.value;
 
     if (!username || !password) {
-        alert("Alanlar boş");
+        showToast("Alanlar boş.","error");
         return;
     }
 
@@ -146,11 +146,11 @@ async function addUser() {
     });
 
     if (!res.ok) {
-        alert("Kullanıcı eklenemedi");
+        showToast("Kullanıcı eklenemedi.","error");
         return;
     }
 
-    alert("Kullanıcı eklendi ✅");
+    showToast("Kullanıcı eklendi.", "success");
     loadUsers();
 }
 
@@ -197,19 +197,40 @@ async function savePermissions() {
         body: JSON.stringify({ permissions: perms })
     });
 
-    alert("Yetkiler kaydedildi ✅");
+    showToast("Yetkiler kaydedildi.","success");
 }
 
-async function deleteUser(id) {
-    if (!confirm("Kullanıcı silinsin mi?")) return;
+async function deleteUser(id){
 
-    await fetch(`${API_BASE}/api/admin/users/${id}/deactivate`, {
-        method: "PUT",
-        headers: authHeaders()
-    });
+    showConfirmToast(
+        "Kullanıcı pasif yapılsın mı?",
+        async ()=>{
 
-    loadUsers();
+            try{
+                const res = await fetch(
+                    `${API_BASE}/api/admin/users/${id}`,
+                    {
+                        method:"DELETE",
+                        headers:authHeaders()
+                    }
+                );
+
+                if(!res.ok){
+                    showToast("Silme başarısız.","error");
+                    return;
+                }
+
+                showToast("Kullanıcı pasif yapıldı.","success");
+                loadUsers();
+
+            }catch(err){
+                showToast("Sunucuya ulaşılamıyor.","error");
+            }
+        }
+    );
 }
+
+
 
 /*********************************
  * KREDİLER (şimdilik init)

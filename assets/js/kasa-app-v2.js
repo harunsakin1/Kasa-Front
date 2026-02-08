@@ -11,43 +11,91 @@ function loadKasaChart(girisData, cikisData, labels) {
   if (kasaChart) kasaChart.destroy();
 
   kasaChart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
       labels,
       datasets: [
         {
-          label: "Kasa Giriş",
-          data: girisData,
-          borderColor: "#28a745",
-          backgroundColor: "rgba(40,167,69,0.1)",
-          fill: true,
-          tension: 0.3
-        },
-        {
-          label: "Kasa Çıkış",
-          data: cikisData,
-          borderColor: "#dc3545",
-          backgroundColor: "rgba(220,53,69,0.1)",
-          fill: true,
-          tension: 0.3
-        }
+  label: "Kasa Giriş",
+  data: girisData,
+  borderColor: "#00C853",
+  backgroundColor: "rgba(0,200,83,0.35)",
+  borderWidth: 2,
+  borderRadius: 6
+},
+{
+  label: "Kasa Çıkış",
+  data: cikisData,
+  borderColor: "#FF1744",
+  backgroundColor: "rgba(255,23,68,0.35)",
+  borderWidth: 2,
+  borderRadius: 6
+}
+
       ]
     },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
+    options: {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation:{
+    duration:800
+  },
+
+  scales: {
+    x: {
+      grid: {
+        color: "rgba(255, 255, 255, 0.28)", // dikey çizgiler
+        lineWidth: 1.2
+      },
+      ticks: {
+        color: "#f8f8f8",
+        font: { weight: "bold" }
+      }
+    },
+    y: {
+      grid: {
+        color: "rgba(255, 255, 255, 0.27)", // yatay çizgiler
+        lineWidth: 1.2
+      },
+      ticks: {
+        color: "#ffffff",
+        font: { weight: "bold" }
+      }
+    }
+  }
+}
+  }
+)
 }
 
 /* ==============================
    PROGRESS BAR
 ============================== */
 function setAutoBar(barId, value, maxValue) {
+
   let percent = 0;
-  if (maxValue > 0) percent = (value / maxValue) * 100;
-  if (percent > 100) percent = 100;
+  if(maxValue > 0){
+    percent = (value / maxValue) * 100;
+  }
+  if(percent > 100) percent = 100;
 
   const el = document.getElementById(barId);
-  if (el) el.style.width = percent + "%";
+  if(!el) return;
+
+  el.style.width = percent + "%";
+
+  // RENK MANTIĞI
+  if(percent < 50){
+    el.style.background = "linear-gradient(90deg,#00C853,#69F0AE)";
+  }
+  else if(percent < 80){
+    el.style.background = "linear-gradient(90deg,#FFC107,#FFD54F)";
+  }
+  else{
+    el.style.background = "linear-gradient(90deg,#FF1744,#FF8A80)";
+  }
 }
+
 
 /* ==============================
    LOGOUT (GLOBAL)
@@ -203,5 +251,360 @@ document.addEventListener(
   },
   true
 );
+
+document.addEventListener("click", async function (e) {
+
+    // KASA GİRİŞ
+    if (e.target.id === "btnKasaGiris") {
+        console.log("giriş tıklandı");
+
+        let tutar = document.getElementById("tutar").value;
+        let aciklama = document.getElementById("aciklama").value;
+
+        tutar = tutar
+    .replace(" ₺","")
+    .replace(/\./g,"")
+    .replace(",", ".");
+
+const amount = parseFloat(tutar);
+
+        if (!amount) {
+            alert("Tutar giriniz");
+            return;
+        }
+
+        const res = await fetch("http://localhost:8080/api/cash/income", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + localStorage.getItem("token")
+            },
+            body: JSON.stringify({
+                amount,
+                description: aciklama
+            })
+        });
+
+        if (res.ok) {
+  showToast("Kasa girişi kaydedildi", "success");
+
+  setTimeout(() => {
+    loadPage("index.html");
+
+    // index DOM'a basılsın diye kısa bekleme
+    setTimeout(() => {
+      initDashboard();
+    }, 300);
+
+  }, 1200);
+
+} else {
+  showToast("Hata oluştu", "error");
+}
+
+
+    }
+    
+
+    // KASA ÇIKIŞ
+    if (e.target.id === "btnKasaCikis") {
+        console.log("çıkış tıklandı");
+
+        let tutar = document.getElementById("tutar").value;
+        let aciklama = document.getElementById("aciklama").value;
+
+        tutar = tutar
+            .replace(" TL", "")
+            .replace(/\./g, "")
+            .replace(",", ".");
+
+        const amount = parseFloat(tutar);
+
+        if (!amount) {
+            alert("Tutar giriniz");
+            return;
+        }
+
+        const res = await fetch("http://localhost:8080/api/cash/expense", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + localStorage.getItem("token")
+            },
+            body: JSON.stringify({
+                amount,
+                description: aciklama
+            })
+        });
+
+        if (res.ok) {
+  showToast("Kasa çıkışı kaydedildi", "success");
+
+  setTimeout(() => {
+    loadPage("index.html");
+    setTimeout(() => initDashboard(), 300);
+  }, 1200);
+
+} else {
+  showToast("Hata oluştu", "error");
+}
+
+
+    }
+
+});
+
+
+// DASHBORD VERİ
+async function loadDashboard(){
+
+    const gi = document.getElementById("gunlukGiris");
+    const gc = document.getElementById("gunlukCikis");
+    const an = document.getElementById("aylikNet");
+    const kb = document.getElementById("kasaBakiye");
+
+    // Eğer index sayfasında değilsek çık
+    if(!gi || !gc || !an || !kb){
+        return;
+    }
+
+    const res = await fetch(
+        "http://localhost:8080/api/dashboard",
+        {
+            headers:{
+                "Authorization":
+                "Bearer " + localStorage.getItem("token")
+            }
+        });
+
+    if(!res.ok) return;
+
+    const d = await res.json();
+
+    const fmt = n =>
+        Number(n).toLocaleString("tr-TR",{minimumFractionDigits:2})+" TL";
+
+    animateValue(gi, Number(d.todayIncome));
+animateValue(gc, Number(d.todayExpense));
+animateValue(an, Number(d.monthlyNet));
+animateValue(kb, Number(d.balance));
+
+
+// ===== PROGRESS BAR DOLUM =====
+setAutoBar("barGunlukGiris", d.todayIncome, 500000);
+setAutoBar("barGunlukCikis", d.todayExpense, 500000);
+setAutoBar("barBakiye", d.balance, 500000);
+setAutoBar("barAylikGiris", d.monthlyNet, 500000);
+
+}
+
+async function loadChart(){
+
+  const canvas =
+    document.getElementById("chartjs-revenue-statistics-chart");
+
+  if(!canvas) return;
+
+  const res = await fetch(
+    "http://localhost:8080/api/dashboard/chart",
+    {
+      headers:{
+        "Authorization":
+        "Bearer " + localStorage.getItem("token")
+      }
+    });
+
+  if(!res.ok) return;
+
+  const d = await res.json();
+
+  loadKasaChart(
+    d.incomes.map(Number),
+    d.expenses.map(Number),
+    d.labels
+  );
+}
+
+
+let dashboardLoaded = false;
+
+function initDashboardIfPresent(){
+
+    if(document.getElementById("chartjs-revenue-statistics-chart")){
+        console.log("Dashboard reload");
+
+        loadDashboard();
+        loadChart();
+    }
+}
+
+function tryInitDashboard(){
+
+    const canvas =
+        document.getElementById("chartjs-revenue-statistics-chart");
+
+    if(!canvas) return;
+
+    console.log("Dashboard tek sefer yükleniyor");
+
+    loadDashboard();
+    loadChart();
+}
+
+// pageContent değişince kontrol et
+const pageContent =
+    document.getElementById("pageContent");
+
+if(pageContent){
+    new MutationObserver(()=>{
+        tryInitDashboard();
+    }).observe(pageContent,{
+        childList:true
+    });
+}
+
+function initDashboard(){
+
+    const canvas =
+        document.getElementById("chartjs-revenue-statistics-chart");
+
+    if(!canvas) return;
+
+    console.log("Dashboard init çalıştı");
+
+    loadDashboard();
+    loadChart();
+}
+
+function animateValue(el, endValue){
+
+  const duration = 800; // ms
+  const start = 0;
+  const startTime = performance.now();
+
+  function update(now){
+    const progress = Math.min((now - startTime)/duration, 1);
+    const value = Math.floor(progress * endValue);
+
+    el.innerText =
+      value.toLocaleString("tr-TR",
+      {minimumFractionDigits:2}) + " TL";
+
+    if(progress < 1){
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+function showToast(message,type="success"){
+
+  const box = document.getElementById("toastBox");
+  if(!box) return;
+
+  const t = document.createElement("div");
+  t.className = "toast " + type;
+
+  // İkon seçimi
+  let icon = "✔";
+  if(type==="error") icon="✖";
+  if(type==="info") icon="ℹ";
+
+  t.innerHTML = `<span>${icon}</span> ${message}`;
+
+  box.appendChild(t);
+
+  setTimeout(()=>{
+    t.style.opacity="0";
+    t.style.transform="translateY(20px)";
+    setTimeout(()=>t.remove(),300);
+  },2500);
+}
+
+// TUTAR INPUT MASK (TL + binlik)
+const tutarInputMask = (input)=>{
+
+    input.addEventListener("input", function(){
+
+        let cursor = this.selectionStart;
+
+        let raw = this.value;
+
+        // TL ve boşluk temizle
+        raw = raw.replace(" TL","");
+
+        // Sadece sayı
+        raw = raw.replace(/\D/g,'');
+
+        if(raw === ""){
+            this.value="";
+            return;
+        }
+
+        // Kuruş ekle (son 2 hane)
+        let num = (parseInt(raw)/100);
+
+        let formatted = num.toLocaleString("tr-TR",{
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+        });
+
+        this.value = formatted + " TL";
+
+        // cursor'ı sona sabitle
+        this.setSelectionRange(
+            this.value.length-3,
+            this.value.length-3
+        );
+    });
+};
+
+
+// Layout sistemi için delegation
+document.body.addEventListener("focusin", function(e){
+
+    if(e.target.id === "tutar" && !e.target.dataset.masked){
+        tutarInputMask(e.target);
+        e.target.dataset.masked = "true";
+    }
+
+});
+
+function showConfirmToast(message, onConfirm){
+
+    const box = document.getElementById("toastBox");
+
+    const toast = document.createElement("div");
+    toast.className = "toast warning";
+
+    toast.innerHTML = `
+        ${message}
+        <div style="margin-top:8px">
+            <button id="yesBtn">Evet</button>
+            <button id="noBtn">Hayır</button>
+        </div>
+    `;
+
+    box.appendChild(toast);
+
+    toast.querySelector("#yesBtn").onclick = ()=>{
+        onConfirm();
+        toast.remove();
+    };
+
+    toast.querySelector("#noBtn").onclick = ()=>{
+        toast.remove();
+    };
+
+    setTimeout(()=>toast.remove(),7000);
+}
+
+
+
+
+
+
+
 
 
